@@ -1,5 +1,15 @@
 # TCC-POC3
 
+## WSL2 install
+
+* https://www.virtualizationhowto.com/2021/11/install-minikube-in-wsl-2-with-kubectl-and-helm/
+  - Enable WSL2
+  - Install docker desktop windows
+  - Install ubuntu 20.04 WSL2
+  - docker cli para Ubuntu
+  - kubectl cli para Ubuntu
+  - gcloud cli para Ubuntu
+
 ## GCloud
 
 ### Instalar Shell

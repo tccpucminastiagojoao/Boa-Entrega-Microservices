@@ -18,6 +18,13 @@ spec:
                 name: mic-sic-service
                 port:
                   number: 5000
+          - path: /destinatarios
+            pathType: Prefix
+            backend:
+              service:
+                name: mic-sic-service
+                port:
+                  number: 5000
 ---
 # Create Service to access kong-proxy in default namespace
 apiVersion: v1

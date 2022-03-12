@@ -1,7 +1,8 @@
 FROM python:3.10.2
 WORKDIR /app
 COPY app/requirements.txt /app/
-RUN pip install -r /app/requirements.txt
 COPY app/main.py /app/
+COPY app/models.py /app/
+RUN pip install -r requirements.txt
 EXPOSE 5000
-CMD ["python", "/app/main.py"]
+CMD ["python", "main.py"]

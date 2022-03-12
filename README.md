@@ -48,6 +48,7 @@
 ### Access Postgres
 * Pod port forward: gcloud container clusters get-credentials tccpucminastiagojoao-cluster --zone southamerica-east1-a --project applied-mystery-342719 && kubectl port-forward mic-sic-postgres 5432:5432
 
-
+### Docker remove cache
+* docker system prune -a
 
 

@@ -1,0 +1,29 @@
+# Ingress for mic-sic-service
+# Modulo informações cadastrais (mic)
+# Serviço informações de clientes (sic)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mic-sic-ingress
+  namespace: default
+spec:
+  ingressClassName: kong
+  rules:
+    - http:
+        paths:
+          - path: /clientes
+            pathType: Prefix
+            backend:
+              service:
+                name: mic-sic-service
+                port:
+                  number: 5000
+---
+# Create Service to access kong-proxy in default namespace
+apiVersion: v1
+kind: Service
+metadata:
+  name: kong-proxy
+spec:
+  type: ExternalName
+  externalName: kong-proxy.kong.svc.cluster.local

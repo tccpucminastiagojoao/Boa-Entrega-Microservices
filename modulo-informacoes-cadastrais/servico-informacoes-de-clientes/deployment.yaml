@@ -1,0 +1,87 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mic-sic-postgres-config
+  labels:
+    app: mic-sic-postgres
+data:
+  PGDATA: /var/lib/postgresql/data/mic-sic-pgdata
+  POSTGRES_DB: postgresdb
+  POSTGRES_USER: postgresadmin
+  POSTGRES_PASSWORD: scBktWufX4kX
+  POSTGRES_SERVICE: mic-sic-postgres-service
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mic-sic-postgres
+  labels:
+    app: mic-sic-postgres
+spec:
+  volumes:
+    - name: mic-sic-postgredb-volume
+      persistentVolumeClaim:
+        claimName: pvc-mic-sic-postgres
+  containers:
+    - name: mic-sic-postgres
+      image: postgres:14-alpine
+      imagePullPolicy: IfNotPresent
+      ports:
+        - containerPort: 5432
+      envFrom:
+        - configMapRef:
+            name: mic-sic-postgres-config
+      volumeMounts:
+        - name: mic-sic-postgredb-volume
+          mountPath: /var/lib/postgresql/data
+          readOnly: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mic-sic-postgres-service
+spec:
+  selector:
+    app: mic-sic-postgres
+  ports:
+    - name: "5432"
+      port: 5432
+      targetPort: 5432
+  type: NodePort            
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mic-sic-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mic-sic-app
+  template:
+    metadata:
+      labels:
+        app: mic-sic-app
+    spec:
+      containers:
+        - name: mic-sic-app
+          image: southamerica-east1-docker.pkg.dev/applied-mystery-342719/tccpucminastiagojoao-repo/mic-sic-microservice:0.0.1
+          ports:
+            - containerPort: 5000
+          envFrom:
+            - configMapRef:
+                name: mic-sic-postgres-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mic-sic-service
+  labels:
+    app: mic-sic-service
+spec:
+  selector:
+    app: mic-sic-app
+  ports:
+    - name: http
+      port: 5000
+      targetPort: 5000

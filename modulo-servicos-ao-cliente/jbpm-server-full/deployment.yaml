@@ -1,17 +1,4 @@
 apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: pvc-jbpm-server-full
-spec:
-  accessModes:
-    - ReadWriteOnce
-  storageClassName: standard
-  resources:
-    requests:
-      storage: 1Gi
-
----
-apiVersion: v1
 kind: Service
 metadata:
   name: node-port-jbpm-server-full
@@ -51,5 +38,6 @@ spec:
         - containerPort: 8001
         - containerPort: 8080
       volumeMounts:
-        - mountPath: /opt/jboss/wildfly/bin/.niogit
-          name: niogit-jbpm-server-full
+        - name: niogit-jbpm-server-full
+          mountPath: /opt/jboss/wildfly/bin/.niogit
+          readOnly: false

@@ -46,9 +46,12 @@
 * Path: http://127.0.0.1:8080/business-central
 
 ### Access Postgres
-* Pod port forward: gcloud container clusters get-credentials tccpucminastiagojoao-cluster --zone southamerica-east1-a --project applied-mystery-342719 && kubectl port-forward mic-sic-postgres 5432:5432
+* Pod port forward: gcloud container clusters get-credentials tccpucminastiagojoao-cluster --zone southamerica-east1-a --project applied-mystery-342719 && kubectl port-forward <???-???-postgres> 5432:5432
 
 ### Docker remove cache
 * docker system prune -a
+
+### Docker access bash
+* docker exec -it <container name> /bin/bash
 
 

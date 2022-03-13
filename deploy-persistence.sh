@@ -39,3 +39,4 @@ kubectl apply -f ./${MODULE_NAME}/${SERVER_NAME}/deployment-persistence.yaml
 # Apply microservices persistences
 apply_microservice_persistence "modulo-informacoes-cadastrais" "servico-informacoes-de-clientes"
 apply_microservice_persistence "modulo-informacoes-cadastrais" "servico-informacoes-de-destinatarios"
+apply_microservice_persistence "modulo-servicos-ao-cliente" "servico-acompanhamento-workflow"

@@ -18,7 +18,7 @@ spec:
                 name: mic-sic-service
                 port:
                   number: 5000
----                  
+---
 # Ingress for mic-sid-service
 # Modulo informações cadastrais (mic)
 # Serviço informações de destinatarios (sid)
@@ -37,6 +37,27 @@ spec:
             backend:
               service:
                 name: mic-sid-service
+                port:
+                  number: 5000
+---
+# Ingress for msc-saw-microservice
+# Modulo serviços ao cliente (msc)
+# Serviço acompanhamentos workflow (saw)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: msc-saw-ingress
+  namespace: default
+spec:
+  ingressClassName: kong
+  rules:
+    - http:
+        paths:
+          - path: /pedidos
+            pathType: Prefix
+            backend:
+              service:
+                name: msc-saw-service
                 port:
                   number: 5000
 ---

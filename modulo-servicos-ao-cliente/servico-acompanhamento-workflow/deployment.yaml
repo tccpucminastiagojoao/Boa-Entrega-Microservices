@@ -1,0 +1,91 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: msc-saw-postgres-config
+  labels:
+    app: msc-saw-postgres
+data:
+  PGDATA: /var/lib/postgresql/data/msc-saw-pgdata
+  POSTGRES_DB: postgresdb
+  POSTGRES_USER: postgresadmin
+  POSTGRES_PASSWORD: scBktWufX4kX
+  POSTGRES_SERVICE: msc-saw-postgres-service
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: msc-saw-postgres
+  labels:
+    app: msc-saw-postgres
+spec:
+  volumes:
+    - name: msc-saw-postgredb-volume
+      persistentVolumeClaim:
+        claimName: pvc-msc-saw-postgres
+  containers:
+    - name: msc-saw-postgres
+      image: postgres:14-alpine
+      imagePullPolicy: Always
+      ports:
+        - containerPort: 5432
+      envFrom:
+        - configMapRef:
+            name: msc-saw-postgres-config
+      volumeMounts:
+        - name: msc-saw-postgredb-volume
+          mountPath: /var/lib/postgresql/data
+          readOnly: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: msc-saw-postgres-service
+spec:
+  selector:
+    app: msc-saw-postgres
+  ports:
+    - name: "5432"
+      port: 5432
+      targetPort: 5432
+  type: NodePort            
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: msc-saw-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: msc-saw-app
+  template:
+    metadata:
+      labels:
+        app: msc-saw-app
+    spec:
+      containers:
+        - name: msc-saw-app
+          image: southamerica-east1-docker.pkg.dev/applied-mystery-342719/tccpucminastiagojoao-repo/msc-saw-microservice:0.0.1
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+          env:
+            - name: JBPM_SERVICE
+              value: "node-port-jbpm-server-full"
+          envFrom:
+            - configMapRef:
+                name: msc-saw-postgres-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: msc-saw-service
+  labels:
+    app: msc-saw-service
+spec:
+  selector:
+    app: msc-saw-app
+  ports:
+    - name: http
+      port: 5000
+      targetPort: 5000

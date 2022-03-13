@@ -6,9 +6,9 @@ db = SQLAlchemy()
 
 
 @dataclass
-class Cliente(db.Model):
+class Destinatario(db.Model):
     """
-    Cliente
+    Destinatario
     """
     id: int
     nome: str
@@ -21,7 +21,7 @@ class Cliente(db.Model):
     cpf: str
     cnpj: str
 
-    __tablename__ = 'clientes'
+    __tablename__ = 'destinatarios'
 
     id = db.Column(db.Integer, primary_key=True, auto_increment=True)
     nome = db.Column(db.String(128))

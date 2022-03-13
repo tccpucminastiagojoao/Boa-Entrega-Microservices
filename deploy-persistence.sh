@@ -36,5 +36,6 @@ SERVER_VERSION=0.0.1
 SERVER_NODE_PORT=node-port-${SERVER_NAME}
 kubectl apply -f ./${MODULE_NAME}/${SERVER_NAME}/deployment-persistence.yaml
 
-# Apply microservice persistences
+# Apply microservices persistences
 apply_microservice_persistence "modulo-informacoes-cadastrais" "servico-informacoes-de-clientes"
+apply_microservice_persistence "modulo-informacoes-cadastrais" "servico-informacoes-de-destinatarios"

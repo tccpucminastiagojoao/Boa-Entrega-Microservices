@@ -46,22 +46,6 @@ def create_app():
                            'Pará', 'Norte', 'Brasil', '68000-251', '', '12.345.678/0001-99'))
             db.session.commit()
 
-    from models import Destinatario
-    with app.app_context():
-        # Populate Destinatario with examples
-        if Destinatario.query.count() == 0:
-            db.session.add(Destinatario('Jorge Amado', 'Rua Via Central', 'Taubaté',
-                           'São Paulo', 'Sudeste', 'Brasil', '11921-124', '123.456.789-99', ''))
-            db.session.add(Destinatario('Margarida Soares', 'Avenida dos Expedicionários', 'Vargem Grande',
-                           'São Paulo', 'Sudeste', 'Brasil', '11127-321', '123.456.789-99', ''))
-            db.session.add(Destinatario('Simone Vieira', 'Travessa Borges de Medeiros', 'Caxias',
-                           'Rio Grande do Sul', 'Sul', 'Brasil', '90123-281', '123.456.789-99', ''))
-            db.session.add(Destinatario('Indústria de Móveis Horizonte', 'Rodovia Municipal CP01', 'Campo Grande',
-                           'Mato Grosso do Sul', 'Centro-Oeste', 'Brasil', '79721-744', '', '12.345.678/0001-99'))
-            db.session.add(Destinatario('Laticínios Casa da Ovelha', 'Avenida Getúlio Vargas', 'Belém',
-                           'Pará', 'Norte', 'Brasil', '68984-435', '', '12.345.678/0001-99'))
-            db.session.commit()
-
     @app.route('/clientes', methods=['GET'])
     def clientes():
         clientes = db.session.query(Cliente).all()
@@ -74,19 +58,6 @@ def create_app():
             return make_response(jsonify(cliente), 200)
         else:
             return make_response(jsonify({'message': 'Client Not Found'}), 404)
-
-    @app.route('/destinatarios', methods=['GET'])
-    def destinatarios():
-        destinatarios = db.session.query(Destinatario).all()
-        return make_response(jsonify(destinatarios), 200)
-
-    @app.route('/destinatarios/<int:destinatario_id>', methods=['GET'])
-    def get_destinatario(destinatario_id):
-        destinatario = db.session.query(Destinatario).get(destinatario_id)
-        if destinatario:
-            return make_response(jsonify(destinatario), 200)
-        else:
-            return make_response(jsonify({'message': 'Destinatario Not Found'}), 404)
 
     return app
 

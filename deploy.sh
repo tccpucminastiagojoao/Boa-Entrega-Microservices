@@ -42,8 +42,9 @@ SERVER_NAME="jbpm-server-full"
 kubectl delete -f ./${MODULE_NAME}/${SERVER_NAME}/deployment.yaml
 kubectl apply -f ./${MODULE_NAME}/${SERVER_NAME}/deployment.yaml
 
-# Apply microservice
+# Apply microservices
 build_apply_microservice "modulo-informacoes-cadastrais" "servico-informacoes-de-clientes" "mic-sic-microservice" "0.0.1"
+build_apply_microservice "modulo-informacoes-cadastrais" "servico-informacoes-de-destinatarios" "mic-sid-microservice" "0.0.1"
 
 # Install Kong for Kubernetes
 kubectl delete -f https://bit.ly/k4k8s

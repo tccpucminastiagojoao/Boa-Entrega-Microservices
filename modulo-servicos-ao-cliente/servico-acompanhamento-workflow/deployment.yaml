@@ -71,7 +71,7 @@ spec:
             - containerPort: 5000
           env:
             - name: JBPM_SERVICE
-              value: "node-port-jbpm-server-full"
+              value: "load-balancer-jbpm-server-full"
           envFrom:
             - configMapRef:
                 name: msc-saw-postgres-config

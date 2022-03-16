@@ -27,17 +27,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: node-port-jbpm-server-full
+  name: load-balancer-jbpm-server-full
 spec:
-  type: NodePort
+  type: LoadBalancer
   selector:
     app: jbpm-server-full
   ports:
-    - name: "8001"
-      nodePort: 30801
-      port: 8001
-      targetPort: 8001
     - name: "8080"
-      nodePort: 30880
       port: 8080
       targetPort: 8080

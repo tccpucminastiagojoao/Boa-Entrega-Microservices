@@ -114,11 +114,12 @@ def put_jbpm_server(req_url, req_data={}):
         return req_res_error, 503
 
 
-def get_completed_node_by_type(data, type):
-    for node in data['node-instance']:
-        if node['node-type'] == type and node['node-completed']:
-            return node
-    return None
+def get_nodes_by_type(data, type):
+    return [node for node in data['node-instance'] if node['node-type'] == type]
+
+
+def get_nodes_by_name(data, name):
+    return [node for node in data['node-instance'] if node['node-name'] == name]
 
 
 def get_random_cod_rastreio():
@@ -126,15 +127,16 @@ def get_random_cod_rastreio():
     return ''.join(random.choice(letters) for i in range(32))
 
 
-def get_pedido_data(pedido, pedido_id):
+def get_pedido_data(pedido):
     data = jsonify(pedido).get_json()
     data['links'] = {
-        'self': '{0}pedidos/{1}'.format(request.url_root, pedido_id),
-        'nodes': '{0}pedidos/{1}/nodes'.format(request.url_root, pedido_id),
-        'start-node': '{0}pedidos/{1}/nodes/start'.format(request.url_root, pedido_id),
-        'end-node': '{0}pedidos/{1}/nodes/end'.format(request.url_root, pedido_id),
-        'workitems': '{0}pedidos/{1}/workitems'.format(request.url_root, pedido_id),
-        'images': '{0}pedidos/{1}/images'.format(request.url_root, pedido_id)
+        'self': '{0}pedidos/{1}'.format(request.url_root, pedido.id),
+        'nodes': '{0}pedidos/{1}/nodes'.format(request.url_root, pedido.id),
+        'node-by-type': '{0}pedidos/{1}/nodes/type/node_type'.format(request.url_root, pedido.id),
+        'node-by-name': '{0}pedidos/{1}/nodes/name/node_name'.format(request.url_root, pedido.id),
+        'workitems': '{0}pedidos/{1}/workitems'.format(request.url_root, pedido.id),
+        'complete-workitem': '{0}pedidos/{1}/workitems/workitem_index/complete'.format(request.url_root, pedido.id),
+        'images': '{0}pedidos/{1}/images'.format(request.url_root, pedido.id)
     }
     return data
 
@@ -170,12 +172,20 @@ def create_app():
         '''
         Get all pedidos
         '''
-        pedidos = db.session.query(Pedido).all()
+        page = int(request.args.get('page', '0'))
+        pageSize = int(request.args.get('pageSize', '999'))
+
+        if request.args.get('completed', 'false') == 'true':
+            pedidos = [get_pedido_data(pedido) for pedido in db.session.query(
+                Pedido).filter(Pedido.data_entrega != None).limit(pageSize).offset(page*pageSize)]
+        elif request.args.get('active', 'false') == 'true':
+            pedidos = [get_pedido_data(pedido) for pedido in db.session.query(
+                Pedido).filter(Pedido.data_entrega == None).limit(pageSize).offset(page*pageSize)]
+        else:
+            pedidos = [get_pedido_data(pedido) for pedido in db.session.query(
+                Pedido).limit(pageSize).offset(page*pageSize).all()]
+
         return make_response(jsonify(pedidos), 200)
-
-    # TODO pedidos abertos
-
-    # TODO pedidos fechados
 
     # jBPM = POST /server/containers/{containerId}/processes/{processId}/instances
     @app.route('/pedidos', methods=['POST'])
@@ -211,7 +221,7 @@ def create_app():
                                 data_entrega=None)
                 db.session.add(pedido)
                 db.session.commit()
-                data = get_pedido_data(pedido, pedido.id)                
+                data = get_pedido_data(pedido)
                 return make_response(jsonify(data), 201)
             else:
                 return make_response(data, status_code)
@@ -225,7 +235,7 @@ def create_app():
         '''
         pedido = db.session.query(Pedido).get(pedido_id)
         if pedido:
-            data = get_pedido_data(pedido, pedido_id)
+            data = get_pedido_data(pedido)
             return make_response(jsonify(data), 200)
         else:
             return make_response(jsonify({'message': 'Pedido Not Found'}), 404)
@@ -240,56 +250,71 @@ def create_app():
         if pedido:
             req_params = {'page': request.args.get('page', '0'),
                           'pageSize': request.args.get('pageSize', '999')}
-            if 'completedOnly' in request.args:
-                req_params['completedOnly'] = request.args.get('completedOnly')
-            req_url = '/server/containers/{0}/processes/instances/{1}/nodes/instances'.format(
-                JBPM_CONTAINER_ID, pedido.id_workflow)
-            data, status_code = get_jbpm_server(req_url, req_params)
-            return make_response(data, status_code)
-        else:
-            return make_response(jsonify({'message': 'Pedido Not Found'}), 404)
 
-    # jBPM = GET /server/containers/{containerId}/processes/instances/{processInstanceId}/nodes/instances
-    @app.route('/pedidos/<int:pedido_id>/nodes/start', methods=['GET'])
-    def get_pedido_start_node(pedido_id):
-        '''
-        Get specific pedido workflow start node
-        '''
-        pedido = db.session.query(Pedido).get(pedido_id)
-        if pedido:
-            req_params = {'pageSize': '999'}
+            if request.args.get('completed', 'false') == 'true':
+                req_params['completedOnly'] = 'true'
+            elif request.args.get('active', 'false') == 'true':
+                req_params['activeOnly'] = 'true'
+
             req_url = '/server/containers/{0}/processes/instances/{1}/nodes/instances'.format(
                 JBPM_CONTAINER_ID, pedido.id_workflow)
             data, status_code = get_jbpm_server(req_url, req_params)
-            if status_code == 200:
-                start_node = get_completed_node_by_type(data, 'StartNode')
-                if start_node:
-                    return make_response(start_node, 200)
-                else:
-                    return make_response(jsonify({'message': 'Completed Start Node Not Found'}), 404)
+            if status_code == 200 and 'node-instance' in data:
+                return make_response(jsonify(data['node-instance']), status_code)
             else:
                 return make_response(data, status_code)
         else:
             return make_response(jsonify({'message': 'Pedido Not Found'}), 404)
 
     # jBPM = GET /server/containers/{containerId}/processes/instances/{processInstanceId}/nodes/instances
-    @app.route('/pedidos/<int:pedido_id>/nodes/end', methods=['GET'])
-    def get_pedido_end_node(pedido_id):
+    @app.route('/pedidos/<int:pedido_id>/nodes/type/<node_type>', methods=['GET'])
+    def get_pedido_nodes_by_type(pedido_id, node_type):
         '''
-        Get specific pedido workflow end node
+        Get specific pedido workflow start node
         '''
         pedido = db.session.query(Pedido).get(pedido_id)
         if pedido:
-            req_params = {'pageSize': '999'}
+            req_params = {'page': request.args.get('page', '0'),
+                          'pageSize': request.args.get('pageSize', '999')}
+
+            if request.args.get('completed', 'false') == 'true':
+                req_params['completedOnly'] = 'true'
+            elif request.args.get('active', 'false') == 'true':
+                req_params['activeOnly'] = 'true'
+
             req_url = '/server/containers/{0}/processes/instances/{1}/nodes/instances'.format(
                 JBPM_CONTAINER_ID, pedido.id_workflow)
             data, status_code = get_jbpm_server(req_url, req_params)
-            if status_code == 200:
-                end_node = get_completed_node_by_type(data, 'EndNode')
-                if end_node:
-                    return make_response(end_node, 200)
-                else:
-                    return make_response(jsonify({'message': 'Completed End Node Not Found'}), 404)
+            if status_code == 200 and 'node-instance' in data:
+                nodes = get_nodes_by_type(data, node_type)
+                return make_response(jsonify(nodes), 200)
+            else:
+                return make_response(data, status_code)
+        else:
+            return make_response(jsonify({'message': 'Pedido Not Found'}), 404)
+
+    # jBPM = GET /server/containers/{containerId}/processes/instances/{processInstanceId}/nodes/instances
+    @app.route('/pedidos/<int:pedido_id>/nodes/name/<node_name>', methods=['GET'])
+    def get_pedido_nodes_by_name(pedido_id, node_name):
+        '''
+        Get specific pedido workflow start node
+        '''
+        pedido = db.session.query(Pedido).get(pedido_id)
+        if pedido:
+            req_params = {'page': request.args.get('page', '0'),
+                          'pageSize': request.args.get('pageSize', '999')}
+
+            if request.args.get('completed', 'false') == 'true':
+                req_params['completedOnly'] = 'true'
+            elif request.args.get('active', 'false') == 'true':
+                req_params['activeOnly'] = 'true'
+
+            req_url = '/server/containers/{0}/processes/instances/{1}/nodes/instances'.format(
+                JBPM_CONTAINER_ID, pedido.id_workflow)
+            data, status_code = get_jbpm_server(req_url, req_params)
+            if status_code == 200 and 'node-instance' in data:
+                nodes = get_nodes_by_name(data, node_name)
+                return make_response(jsonify(nodes), 200)
             else:
                 return make_response(data, status_code)
         else:
@@ -301,30 +326,57 @@ def create_app():
         '''
         Get specific pedido workflow workitens
         '''
-        req_params = {'pageSize': '100'}
         pedido = db.session.query(Pedido).get(pedido_id)
         if pedido:
             req_url = '/server/containers/{0}/processes/instances/{1}/workitems'.format(
                 JBPM_CONTAINER_ID, pedido.id_workflow)
-            data, status_code = get_jbpm_server(req_url, req_params)
-            return make_response(data, status_code)
+            data, status_code = get_jbpm_server(req_url)
+            if status_code == 200 and 'work-item-instance' in data:
+                return make_response(jsonify(data['work-item-instance']), status_code)
+            else:
+                return make_response(data, status_code)
         else:
             return make_response(jsonify({'message': 'Pedido Not Found'}), 404)
 
     # jBPM = PUT /server/containers/{containerId}/processes/instances/{processInstanceId}/workitems/{workItemId}/completed
-    @app.route('/pedidos/<int:pedido_id>/workitems/<int:workitem_id>/completed', methods=['PUT'])
-    def complete_pedido_workitem(pedido_id, workitem_id):
+    @app.route('/pedidos/<int:pedido_id>/workitems/<int:workitem_index>/complete', methods=['PUT'])
+    def complete_pedido_workitem(pedido_id, workitem_index):
         '''
         Complete specific pedido workflow workiten
         '''
         pedido = db.session.query(Pedido).get(pedido_id)
         if pedido:
-            # TODO verificar que workitem_id corresponde a Envio e Entregue para salvar data_despacho
-            # e data_entrega no pedido, tambem para finalizar o pedido
-            req_url = '/server/containers/{0}/processes/instances/{1}/workitems/{2}/completed'.format(
-                JBPM_CONTAINER_ID, pedido.id_workflow, workitem_id)
-            data, status_code = put_jbpm_server(req_url)
-            return make_response(data, status_code)
+            # Get workitems
+            req_url = '/server/containers/{0}/processes/instances/{1}/workitems'.format(
+                JBPM_CONTAINER_ID, pedido.id_workflow)
+            data, status_code = get_jbpm_server(req_url)
+            if status_code == 200 and 'work-item-instance' in data:
+                workitems = data['work-item-instance']
+                try:
+                    workitem = workitems[workitem_index]
+                    workitem_id = workitem['work-item-id']
+                    workitem_node_name = workitem['work-item-params']['NodeName']
+
+                    # Check events
+                    if workitem_node_name == 'Envio':
+                        pedido.data_despacho = datetime.now()
+                        db.session.commit()
+                    if workitem_node_name == 'Entregue':
+                        pedido.data_entrega = datetime.now()
+                        db.session.commit()
+
+                    # Complete workitem
+                    req_url = '/server/containers/{0}/processes/instances/{1}/workitems/{2}/completed'.format(
+                        JBPM_CONTAINER_ID, pedido.id_workflow, workitem_id)
+                    data, status_code = put_jbpm_server(req_url)
+                    if status_code == 201:
+                        return make_response(jsonify({'message': 'Workitem completed', 'workitem': workitem}), 201)
+                    else:
+                        return make_response(data, status_code)
+                except IndexError:
+                    return make_response(jsonify({'message': 'Workitem Not Found'}), 404)
+            else:
+                return make_response(jsonify({'message': 'Workitem Not Found'}), 404)
         else:
             return make_response(jsonify({'message': 'Pedido Not Found'}), 404)
 

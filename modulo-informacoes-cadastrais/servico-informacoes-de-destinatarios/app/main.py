@@ -35,15 +35,15 @@ def create_app():
         # Populate Destinatario with examples
         if Destinatario.query.count() == 0:
             db.session.add(Destinatario('Jorge Amado', 'Rua Via Central', 'Taubaté',
-                           'São Paulo', 'Sudeste', 'Brasil', '11921-124', '123.456.789-99', ''))
+                           'São Paulo', 'Sudeste', 'Brasil', '11921124', '09319276099', ''))
             db.session.add(Destinatario('Margarida Soares', 'Avenida dos Expedicionários', 'Vargem Grande',
-                           'São Paulo', 'Sudeste', 'Brasil', '11127-321', '123.456.789-99', ''))
+                           'São Paulo', 'Sudeste', 'Brasil', '11127321', '97479020015', ''))
             db.session.add(Destinatario('Simone Vieira', 'Travessa Borges de Medeiros', 'Caxias',
-                           'Rio Grande do Sul', 'Sul', 'Brasil', '90123-281', '123.456.789-99', ''))
+                           'Rio Grande do Sul', 'Sul', 'Brasil', '90123281', '76918297015', ''))
             db.session.add(Destinatario('Indústria de Móveis Horizonte', 'Rodovia Municipal CP01', 'Campo Grande',
-                           'Mato Grosso do Sul', 'Centro-Oeste', 'Brasil', '79721-744', '', '12.345.678/0001-99'))
+                           'Mato Grosso do Sul', 'Centro-Oeste', 'Brasil', '79721744', '', '13555916000150'))
             db.session.add(Destinatario('Laticínios Casa da Ovelha', 'Avenida Getúlio Vargas', 'Belém',
-                           'Pará', 'Norte', 'Brasil', '68984-435', '', '12.345.678/0001-99'))
+                           'Pará', 'Norte', 'Brasil', '68984435', '', '84174647000120'))
             db.session.commit()
 
     @app.route('/destinatarios', methods=['GET'])

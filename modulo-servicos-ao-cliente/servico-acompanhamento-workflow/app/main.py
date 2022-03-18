@@ -1,3 +1,4 @@
+from pickletools import long4
 from flask import Flask, jsonify, make_response, request
 import os
 import sys
@@ -6,9 +7,9 @@ import numbers
 import string
 import random
 import json
+import time
 from datetime import datetime, timedelta
-
-from sqlalchemy import false
+from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
 # Postgres configuration
 POSTGRES_DB = os.environ['POSTGRES_DB']
@@ -27,6 +28,13 @@ JBPM_SVG_HEADERS = {'accept': 'application/svg+xml',
 JBPM_AUTH = ('wbadmin', 'wbadmin')
 JBPM_CONTAINER_ID = 'Boa-Entrega_1.0.0-SNAPSHOT'
 JBPM_PROCESS_ID = 'Boa-Entrega.Entrega-Padrao'
+
+# Api Gateway configuration
+API_GATEWAY = os.environ['API_GATEWAY']
+API_GATEWAY_URL = 'http://{0}:80'.format(API_GATEWAY)
+API_GATEWAY_JSON_HEADERS = {'accept': 'application/json',
+                            'content-type': 'application/json'}
+API_GATEWAY_AUTH = None
 
 
 def get_jbpm_server(req_url, req_params={}):
@@ -122,6 +130,29 @@ def get_nodes_by_name(data, name):
     return [node for node in data['node-instance'] if node['node-name'] == name]
 
 
+def get_api_gateway(req_url, req_params={}):
+    try:
+        api_gateway_req_url = '{0}{1}'.format(API_GATEWAY_URL, req_url)
+        print("API Gateaway request GET:",
+              api_gateway_req_url, "Parameters:", req_params)
+        req_res = requests.get(
+            url=api_gateway_req_url, headers=API_GATEWAY_JSON_HEADERS, auth=API_GATEWAY_AUTH, params=req_params)
+        req_res_json = req_res.json()
+
+        # Avoid json conversion to a number (need to convert to string)
+        if (isinstance(req_res_json, numbers.Number)):
+            req_res_json = str(req_res_json)
+
+        return req_res_json, req_res.status_code
+    except requests.exceptions.JSONDecodeError:
+        req_res_text = req_res.text
+        return req_res_text, req_res.status_code
+    except requests.exceptions.ConnectionError:
+        req_res_error = 'Failed to establish a connection: {0}{1}'.format(
+            API_GATEWAY_URL, req_url)
+        return req_res_error, 503
+
+
 def get_random_cod_rastreio():
     letters = string.ascii_uppercase + string.digits
     return ''.join(random.choice(letters) for i in range(32))
@@ -131,6 +162,8 @@ def get_pedido_data(pedido):
     data = jsonify(pedido).get_json()
     data['links'] = {
         'self': '{0}pedidos/{1}'.format(request.url_root, pedido.id),
+        'cliente': '{0}pedidos/{1}/cliente'.format(request.url_root, pedido.id),
+        'destinatario': '{0}pedidos/{1}/destinatario'.format(request.url_root, pedido.id),
         'nodes': '{0}pedidos/{1}/nodes'.format(request.url_root, pedido.id),
         'node-by-type': '{0}pedidos/{1}/nodes/type/node_type'.format(request.url_root, pedido.id),
         'node-by-name': '{0}pedidos/{1}/nodes/name/node_name'.format(request.url_root, pedido.id),
@@ -159,13 +192,13 @@ def create_app():
 
     from models import Pedido
     # with app.app_context():
-    # Populate Pedidos with examples
-    # if Pedido.query.count() == 0:
-    #     db.session.add(Pedido(4, 2, 1, "AAABBBCCC", 1.5, 19.57,
-    #                    datetime.now(), datetime.now() + timedelta(days=2)))
-    #     db.session.add(Pedido(3, 5, 1, "ZZZMMMJJJ", 4.5, 33.25,
-    #                    datetime.now(), datetime.now() + timedelta(days=3)))
-    #     db.session.commit()
+    #     #Populate Pedidos with examples
+    #     if Pedido.query.count() == 0:
+    #         db.session.add(Pedido(4, 2, 1, "AAABBBCCC", 2, 29.57,
+    #                     datetime.now(), None, None, None))
+    #         db.session.add(Pedido(3, 5, 1, "ZZZMMMJJJ", 5, 73.25,
+    #                     datetime.now(), None, None, None))
+    #         db.session.commit()
 
     @app.route('/pedidos', methods=['GET'])
     def pedidos():
@@ -195,7 +228,9 @@ def create_app():
         '''
         post_id_cliente = request.form.get('id_cliente')
         post_id_destinatario = request.form.get('id_destinatario')
-        if post_id_cliente and post_id_destinatario:
+        post_prazo_pedido = request.form.get('prazo_pedido')
+        post_valor_pedido = request.form.get('valor_pedido')
+        if post_id_cliente and post_id_destinatario and post_prazo_pedido and post_valor_pedido:
             req_url = '/server/containers/{0}/processes/{1}/instances'.format(
                 JBPM_CONTAINER_ID, JBPM_PROCESS_ID)
             data, status_code = post_jbpm_server(req_url)
@@ -215,8 +250,10 @@ def create_app():
                                 id_destinatario=int(post_id_destinatario),
                                 id_workflow=int(post_id_workflow),
                                 cod_rastreio=new_cod_rastreio,
-                                prazo_pedido=1.0,
-                                valor_pedido=1.0,
+                                prazo_pedido=int(post_prazo_pedido),
+                                valor_pedido=float(post_valor_pedido),
+                                data_criacao=datetime.now(),
+                                data_recebido=None,
                                 data_despacho=None,
                                 data_entrega=None)
                 db.session.add(pedido)
@@ -237,6 +274,32 @@ def create_app():
         if pedido:
             data = get_pedido_data(pedido)
             return make_response(jsonify(data), 200)
+        else:
+            return make_response(jsonify({'message': 'Pedido Not Found'}), 404)
+
+    @app.route('/pedidos/<int:pedido_id>/cliente', methods=['GET'])
+    def get_pedido_cliente(pedido_id):
+        '''
+        Get specific pedido cliente information
+        '''
+        pedido = db.session.query(Pedido).get(pedido_id)
+        if pedido:
+            req_url = '/clientes/{0}'.format(pedido.id_cliente)
+            data, status_code = get_api_gateway(req_url)
+            return make_response(jsonify(data), status_code)
+        else:
+            return make_response(jsonify({'message': 'Pedido Not Found'}), 404)
+
+    @app.route('/pedidos/<int:pedido_id>/destinatario', methods=['GET'])
+    def get_pedido_destinatario(pedido_id):
+        '''
+        Get specific pedido destinatario information
+        '''
+        pedido = db.session.query(Pedido).get(pedido_id)
+        if pedido:
+            req_url = '/destinatarios/{0}'.format(pedido.id_destinatario)
+            data, status_code = get_api_gateway(req_url)
+            return make_response(jsonify(data), status_code)
         else:
             return make_response(jsonify({'message': 'Pedido Not Found'}), 404)
 
@@ -357,11 +420,14 @@ def create_app():
                     workitem_id = workitem['work-item-id']
                     workitem_node_name = workitem['work-item-params']['NodeName']
 
-                    # Check events
-                    if workitem_node_name == 'Envio':
+                    # Check workitem to save dates
+                    if workitem_node_name == 'Recebido':
+                        pedido.data_recebido = datetime.now()
+                        db.session.commit()
+                    elif workitem_node_name == 'Envio':
                         pedido.data_despacho = datetime.now()
                         db.session.commit()
-                    if workitem_node_name == 'Entregue':
+                    elif workitem_node_name == 'Entregue':
                         pedido.data_entrega = datetime.now()
                         db.session.commit()
 
@@ -397,6 +463,94 @@ def create_app():
             return req_res
         else:
             return make_response(jsonify({'message': 'Pedido Not Found'}), 404)
+
+    @app.route('/pedidos/rastreio', methods=['GET'])
+    def get_rastreio():
+        '''
+        Get rastreio pedido
+        '''
+        pedido_cod_rastreio = request.args.get('codigo')
+        pedido_destinatario_cpf = request.args.get('cpf')
+        pedido_destinatario_cnpj = request.args.get('cnpj')
+        if pedido_cod_rastreio and (pedido_destinatario_cpf or pedido_destinatario_cnpj):
+            try:
+                pedido = db.session.query(Pedido).filter(
+                    Pedido.cod_rastreio == pedido_cod_rastreio).one()
+                if pedido:
+                    # Get destinatario data
+                    req_url = '/destinatarios/{0}'.format(
+                        pedido.id_destinatario)
+                    destinatario_data, status_code = get_api_gateway(req_url)
+                    if status_code == 200:
+                        if (destinatario_data['cpf'] == pedido_destinatario_cpf) or (destinatario_data['cnpj'] == pedido_destinatario_cnpj):
+                            return_data = {
+                                "pedido_id": pedido.id,
+                                "cod_rastreio": pedido.cod_rastreio,
+                                "destinatario": destinatario_data,
+                                "data_criacao": pedido.data_criacao,
+                                "data_recebido": pedido.data_recebido if pedido.data_recebido else "Não Recebido",
+                                "data_despacho": pedido.data_despacho if pedido.data_despacho else "Não Despachado",
+                                "data_entrega": pedido.data_entrega if pedido.data_entrega else "Não Entregue",
+                                "prazo_entrega": "Pedido Entregue" if pedido.data_entrega else pedido.data_criacao + timedelta(days=pedido.prazo_pedido)
+                            }
+                            return_data['etapas_completas'] = []
+                            return_data['etapas_em_andamento'] = []
+
+                            # Get nodes data (completed)
+                            req_url = '/server/containers/{0}/processes/instances/{1}/nodes/instances'.format(
+                                JBPM_CONTAINER_ID, pedido.id_workflow)
+                            data, status_code = get_jbpm_server(
+                                req_url, {'completedOnly': 'true'})
+                            if status_code == 200 and 'node-instance' in data:
+                                nodes = data['node-instance']
+                                for node in nodes:
+                                    node_name = node['node-name']
+                                    node_instance_id = node['node-instance-id']
+                                    node_date_unix = int(
+                                        node['start-date']['java.util.Date']) / 1000.0
+                                    node_date_local = datetime.fromtimestamp(
+                                        node_date_unix)
+                                    return_data['etapas_completas'].append(
+                                        {'nome_etapa': node_name,
+                                         'id_etada': node_instance_id,
+                                         'data_completada': node_date_local})
+                            else:
+                                return_data['etapas_completas'].append(
+                                    'Informação Não Disponível')
+
+                            # Get nodes data (active)
+                            req_url = '/server/containers/{0}/processes/instances/{1}/nodes/instances'.format(
+                                JBPM_CONTAINER_ID, pedido.id_workflow)
+                            data, status_code = get_jbpm_server(
+                                req_url, {'activeOnly': 'true'})
+                            if status_code == 200 and 'node-instance' in data:
+                                nodes = data['node-instance']
+                                for node in nodes:
+                                    node_name = node['node-name']
+                                    node_instance_id = node['node-instance-id']
+                                    node_date_unix = int(
+                                        node['start-date']['java.util.Date']) / 1000.0
+                                    node_date_local = datetime.fromtimestamp(
+                                        node_date_unix)
+                                    return_data['etapas_em_andamento'].append(
+                                        {'nome_etapa': node_name,
+                                         'id_etada': node_instance_id,
+                                         'data_criacao': node_date_local})
+                            else:
+                                return_data['etapas_em_andamento'].append(
+                                    'Informação Não Disponível')
+
+                            return make_response(jsonify(return_data), 200)
+                        else:
+                            return make_response(jsonify({'message': 'Pedido Not Found'}), 404)
+                    else:
+                        return make_response(jsonify({'message': 'Pedido Not Found'}), 404)
+            except MultipleResultsFound:
+                return make_response(jsonify({'message': 'Pedido Not Found'}), 404)
+            except NoResultFound:
+                return make_response(jsonify({'message': 'Pedido Not Found'}), 404)
+        else:
+            return make_response(jsonify({'message': 'Check request form data'}), 400)
 
     # jBPM = /server/containers/{containerId}/processes/definitions/{processId}
     @app.route('/pedidos/process/definitions', methods=['GET'])

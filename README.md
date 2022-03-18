@@ -54,4 +54,5 @@
 ### Docker access bash
 * docker exec -it <container name> /bin/bash
 
-
+### Restart deployment after change docker image
+kubectl rollout restart deploy msc-saw-deployment

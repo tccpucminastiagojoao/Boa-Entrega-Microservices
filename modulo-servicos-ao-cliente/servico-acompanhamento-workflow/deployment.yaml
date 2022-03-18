@@ -72,6 +72,8 @@ spec:
           env:
             - name: JBPM_SERVICE
               value: "load-balancer-jbpm-server-full"
+            - name: API_GATEWAY
+              value: "kong-proxy"
           envFrom:
             - configMapRef:
                 name: msc-saw-postgres-config

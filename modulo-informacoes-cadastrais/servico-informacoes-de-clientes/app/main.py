@@ -35,15 +35,15 @@ def create_app():
         # Populate Clientes with examples
         if Cliente.query.count() == 0:
             db.session.add(Cliente('José Silva', 'Rua das Camélias', 'Riberão Preto',
-                           'São Paulo', 'Sudeste', 'Brasil', '11324-333', '123.456.789-99', ''))
+                           'São Paulo', 'Sudeste', 'Brasil', '11324333', '73567603043', ''))
             db.session.add(Cliente('Maria Pereira', 'Rua dos Navegantes', 'Riberão Preto',
-                           'São Paulo', 'Sudeste', 'Brasil', '11324-127', '123.456.789-99', ''))
+                           'São Paulo', 'Sudeste', 'Brasil', '11324127', '06935907004', ''))
             db.session.add(Cliente('Guilherme Tell', 'Rua Brasília', 'Porto Alegre',
-                           'Rio Grande do Sul', 'Sul', 'Brasil', '90010-437', '123.456.789-99', ''))
+                           'Rio Grande do Sul', 'Sul', 'Brasil', '90010437', '97778470098', ''))
             db.session.add(Cliente('Confecções Amor de Bicho', 'Estrada Geral Rinção das Alegrias', 'Dourados',
-                           'Mato Grosso do Sul', 'Centro-Oeste', 'Brasil', '79800-701', '', '12.345.678/0001-99'))
+                           'Mato Grosso do Sul', 'Centro-Oeste', 'Brasil', '79800701', '', '10160099000142'))
             db.session.add(Cliente('Marcenaria Pau Brasil', 'Rodovia Via Expressa 734', 'Santarém',
-                           'Pará', 'Norte', 'Brasil', '68000-251', '', '12.345.678/0001-99'))
+                           'Pará', 'Norte', 'Brasil', '68000251', '', '14878424000168'))
             db.session.commit()
 
     @app.route('/clientes', methods=['GET'])

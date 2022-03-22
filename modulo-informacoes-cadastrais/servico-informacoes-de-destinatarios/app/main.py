@@ -34,16 +34,10 @@ def create_app():
     with app.app_context():
         # Populate Destinatario with examples
         if Destinatario.query.count() == 0:
-            db.session.add(Destinatario('Jorge Amado', 'Rua Via Central', 'Taubaté',
-                           'São Paulo', 'Sudeste', 'Brasil', '11921124', '09319276099', ''))
-            db.session.add(Destinatario('Margarida Soares', 'Avenida dos Expedicionários', 'Vargem Grande',
-                           'São Paulo', 'Sudeste', 'Brasil', '11127321', '97479020015', ''))
-            db.session.add(Destinatario('Simone Vieira', 'Travessa Borges de Medeiros', 'Caxias',
-                           'Rio Grande do Sul', 'Sul', 'Brasil', '90123281', '76918297015', ''))
-            db.session.add(Destinatario('Indústria de Móveis Horizonte', 'Rodovia Municipal CP01', 'Campo Grande',
-                           'Mato Grosso do Sul', 'Centro-Oeste', 'Brasil', '79721744', '', '13555916000150'))
-            db.session.add(Destinatario('Laticínios Casa da Ovelha', 'Avenida Getúlio Vargas', 'Belém',
-                           'Pará', 'Norte', 'Brasil', '68984435', '', '84174647000120'))
+            from cadastros_exemplo import get_cadastros
+            for cad in get_cadastros():
+                db.session.add(Destinatario(cad['nome'], cad['logradouro'], cad['cidade'],
+                               cad['estado'], cad['regiao'], 'Brasil', cad['cep'], cad['cpf'], cad['cnpj']))
             db.session.commit()
 
     @app.route('/destinatarios', methods=['GET'])

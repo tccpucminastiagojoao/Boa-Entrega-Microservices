@@ -18,26 +18,20 @@ gcloud auth configure-docker ${gcloud_repo_region}-docker.pkg.dev
 # Get credentials to GKE cluster
 gcloud container clusters get-credentials ${gcloud_cluster} --zone ${gcloud_cluster_zone} --project ${PROJECT_ID}
 
-delete_microservice() {
+delete_microservice_persistence() {
     module_name="${1}"
     service_name="${2}"
 
-    # Delete microservice
-    kubectl delete -f ./${module_name}/${service_name}/deployment.yaml
+    # Delete microservice persistence
+    kubectl delete -f ./${module_name}/${service_name}/deployment-persistence.yaml
 }
 
-# Delete microservices
-delete_microservice "modulo-informacoes-cadastrais" "servico-informacoes-de-clientes"
-delete_microservice "modulo-informacoes-cadastrais" "servico-informacoes-de-destinatarios"
-delete_microservice "modulo-servicos-ao-cliente" "servico-acompanhamento-workflow"
+# Delete microservices persistences
+delete_microservice_persistence "modulo-informacoes-cadastrais" "servico-informacoes-de-clientes"
+delete_microservice_persistence "modulo-informacoes-cadastrais" "servico-informacoes-de-destinatarios"
+delete_microservice_persistence "modulo-servicos-ao-cliente" "servico-acompanhamento-workflow"
 
-# Delete server jbpm-server-full
+# Delete server jbpm-server-full persistence
 MODULE_NAME="modulo-servicos-ao-cliente"
 SERVER_NAME="jbpm-server-full"
-kubectl delete -f ./${MODULE_NAME}/${SERVER_NAME}/deployment.yaml
-
-# Delete Kong for Kubernetes
-kubectl delete -f https://bit.ly/k4k8s
-
-# Delete ingresses for microservices
-kubectl delete -f deployment-ingress.yaml
+kubectl delete -f ./${MODULE_NAME}/${SERVER_NAME}/deployment-persistence.yaml

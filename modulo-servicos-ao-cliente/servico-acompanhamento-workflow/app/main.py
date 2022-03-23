@@ -11,6 +11,9 @@ import time
 from datetime import datetime, timedelta
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
+
+SIMULATE_DATE_PEDIDOS = bool(os.environ['SIMULATE_DATE_PEDIDOS'])
+
 # Postgres configuration
 POSTGRES_DB = os.environ['POSTGRES_DB']
 POSTGRES_USER = os.environ['POSTGRES_USER']
@@ -186,7 +189,8 @@ def create_app():
     from models import db
     db.init_app(app)
     with app.app_context():
-        # db.drop_all()  # Only for tests with data examples
+        if SIMULATE_DATE_PEDIDOS:        
+            db.drop_all()  # Only for tests with data examples
         db.create_all()
         db.session.commit()
 
@@ -207,13 +211,26 @@ def create_app():
         '''
         page = int(request.args.get('page', '0'))
         pageSize = int(request.args.get('pageSize', '999'))
+        completed = bool(request.args.get('completed', 'false') == 'true')
+        active = bool(request.args.get('active', 'false') == 'true')
+        delayed = bool(request.args.get('delayed', 'false') == 'true')
 
-        if request.args.get('completed', 'false') == 'true':
+        if completed and not delayed:
             pedidos = [get_pedido_data(pedido) for pedido in db.session.query(
-                Pedido).filter(Pedido.data_entrega != None).limit(pageSize).offset(page*pageSize)]
-        elif request.args.get('active', 'false') == 'true':
+                Pedido).filter(Pedido.data_entrega != None)
+                .limit(pageSize).offset(page*pageSize)]
+        elif completed and delayed:
             pedidos = [get_pedido_data(pedido) for pedido in db.session.query(
-                Pedido).filter(Pedido.data_entrega == None).limit(pageSize).offset(page*pageSize)]
+                Pedido).filter(Pedido.data_entrega != None).filter(Pedido.data_entrega > Pedido.prazo_entrega)
+                .limit(pageSize).offset(page*pageSize)]
+        elif active and not delayed:
+            pedidos = [get_pedido_data(pedido) for pedido in db.session.query(
+                Pedido).filter(Pedido.data_entrega == None)
+                .limit(pageSize).offset(page*pageSize)]
+        elif active and delayed:
+            pedidos = [get_pedido_data(pedido) for pedido in db.session.query(
+                Pedido).filter(Pedido.data_entrega == None).filter(datetime.now() > Pedido.prazo_entrega)
+                .limit(pageSize).offset(page*pageSize)]
         else:
             pedidos = [get_pedido_data(pedido) for pedido in db.session.query(
                 Pedido).limit(pageSize).offset(page*pageSize).all()]
@@ -245,6 +262,12 @@ def create_app():
                         Pedido.cod_rastreio == new_cod_rastreio)).scalar()):
                     new_cod_rastreio = get_random_cod_rastreio()
 
+                data_criacao = datetime.now()
+
+                if SIMULATE_DATE_PEDIDOS:
+                    # Random data_criacao to simulate old pedidos
+                    data_criacao = datetime.now() - timedelta(days=random.randint(0, 10))
+
                 # Save pedido data
                 pedido = Pedido(id_cliente=int(post_id_cliente),
                                 id_destinatario=int(post_id_destinatario),
@@ -252,10 +275,11 @@ def create_app():
                                 cod_rastreio=new_cod_rastreio,
                                 prazo_pedido=int(post_prazo_pedido),
                                 valor_pedido=float(post_valor_pedido),
-                                data_criacao=datetime.now(),
+                                data_criacao=data_criacao,
                                 data_recebido=None,
                                 data_despacho=None,
                                 data_entrega=None)
+
                 db.session.add(pedido)
                 db.session.commit()
                 data = get_pedido_data(pedido)
@@ -423,12 +447,30 @@ def create_app():
                     # Check workitem to save dates
                     if workitem_node_name == 'Recebido':
                         pedido.data_recebido = datetime.now()
+
+                        if SIMULATE_DATE_PEDIDOS:
+                            # Random data_recebido to simulate delayed pedidos
+                            pedido.data_recebido = pedido.data_criacao + \
+                                timedelta(days=random.randint(0, 5))
+
                         db.session.commit()
                     elif workitem_node_name == 'Envio':
                         pedido.data_despacho = datetime.now()
+
+                        if SIMULATE_DATE_PEDIDOS:
+                            # Random data_recebido to simulate delayed pedidos
+                            pedido.data_despacho = pedido.data_recebido + \
+                                timedelta(days=random.randint(0, 5))
+
                         db.session.commit()
                     elif workitem_node_name == 'Entregue':
                         pedido.data_entrega = datetime.now()
+
+                        if SIMULATE_DATE_PEDIDOS:
+                            # Random data_entrega to simulate delayed pedidos
+                            pedido.data_entrega = pedido.data_despacho + \
+                                timedelta(days=random.randint(0, 5))
+
                         db.session.commit()
 
                     # Complete workitem
@@ -491,7 +533,7 @@ def create_app():
                                 "data_recebido": pedido.data_recebido if pedido.data_recebido else "Não Recebido",
                                 "data_despacho": pedido.data_despacho if pedido.data_despacho else "Não Despachado",
                                 "data_entrega": pedido.data_entrega if pedido.data_entrega else "Não Entregue",
-                                "prazo_entrega": "Pedido Entregue" if pedido.data_entrega else pedido.data_criacao + timedelta(days=pedido.prazo_pedido)
+                                "prazo_entrega": pedido.prazo_entrega
                             }
                             return_data['etapas_completas'] = []
                             return_data['etapas_em_andamento'] = []

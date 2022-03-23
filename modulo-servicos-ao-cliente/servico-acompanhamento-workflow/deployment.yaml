@@ -74,6 +74,8 @@ spec:
               value: "load-balancer-jbpm-server-full"
             - name: API_GATEWAY
               value: "kong-proxy"
+            - name: SIMULATE_DATE_PEDIDOS
+              value: "1"
           envFrom:
             - configMapRef:
                 name: msc-saw-postgres-config

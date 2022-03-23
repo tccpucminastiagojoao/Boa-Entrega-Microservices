@@ -1,6 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
+
 
 db = SQLAlchemy()
 
@@ -21,6 +22,7 @@ class Pedido(db.Model):
     data_recebido: datetime
     data_despacho: datetime
     data_entrega: datetime
+    prazo_entrega: datetime
 
     __tablename__ = 'pedidos'
 
@@ -35,6 +37,7 @@ class Pedido(db.Model):
     data_recebido = db.Column(db.DateTime)
     data_despacho = db.Column(db.DateTime)
     data_entrega = db.Column(db.DateTime)
+    prazo_entrega = db.Column(db.DateTime)
 
     def __init__(self, id_cliente, id_destinatario, id_workflow, cod_rastreio, prazo_pedido, valor_pedido, data_criacao, data_recebido, data_despacho, data_entrega):
         self.id_cliente = id_cliente
@@ -47,4 +50,4 @@ class Pedido(db.Model):
         self.data_recebido = data_recebido
         self.data_despacho = data_despacho
         self.data_entrega = data_entrega
-
+        self.prazo_entrega = data_criacao.date() + timedelta(days=prazo_pedido+1)

@@ -15,7 +15,7 @@ ENV POSTGRES_USER="postgresadmin"
 ENV POSTGRES_PASSWORD="scBktWufX4kX"
 ENV POSTGRES_SERVICE="localhost"
 ENV JBPM_SERVICE="localhost"
-ENV API_GATEWAY="kong-proxy"
+ENV SIMULATE_DATE_PEDIDOS="1"
 
 RUN pip3 install Flask==2.0.3
 RUN pip3 install Flask-SQLAlchemy==2.5.1

@@ -1,0 +1,91 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mge-sai-postgres-config
+  labels:
+    app: mge-sai-postgres
+data:
+  PGDATA: /var/lib/postgresql/data/mge-sai-pgdata
+  POSTGRES_DB: postgresdb
+  POSTGRES_USER: postgresadmin
+  POSTGRES_PASSWORD: scBktWufX4kX
+  POSTGRES_SERVICE: mge-sai-postgres-service
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mge-sai-postgres
+  labels:
+    app: mge-sai-postgres
+spec:
+  volumes:
+    - name: mge-sai-postgredb-volume
+      persistentVolumeClaim:
+        claimName: pvc-mge-sai-postgres
+  containers:
+    - name: mge-sai-postgres
+      image: postgres:14-alpine
+      imagePullPolicy: Always
+      ports:
+        - containerPort: 5432
+      envFrom:
+        - configMapRef:
+            name: mge-sai-postgres-config
+      volumeMounts:
+        - name: mge-sai-postgredb-volume
+          mountPath: /var/lib/postgresql/data
+          readOnly: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mge-sai-postgres-service
+spec:
+  selector:
+    app: mge-sai-postgres
+  ports:
+    - name: "5432"
+      port: 5432
+      targetPort: 5432
+  type: NodePort            
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mge-sai-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mge-sai-app
+  template:
+    metadata:
+      labels:
+        app: mge-sai-app
+    spec:
+      containers:
+        - name: mge-sai-app
+          image: southamerica-east1-docker.pkg.dev/applied-mystery-342719/tccpucminastiagojoao-repo/mge-sai-microservice:0.0.1
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+          env:
+            - name: API_GATEWAY
+              value: "kong-proxy"
+          envFrom:
+            - configMapRef:
+                name: mge-sai-postgres-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mge-sai-service
+  labels:
+    app: mge-sai-service
+spec:
+  selector:
+    app: mge-sai-app
+  ports:
+    - name: http
+      port: 5000
+      targetPort: 5000

@@ -44,6 +44,7 @@ kubectl apply -f ./${MODULE_NAME}/${SERVER_NAME}/deployment.yaml
 build_apply_microservice "modulo-informacoes-cadastrais" "servico-informacoes-de-clientes" "mic-sic-microservice" "0.0.1"
 build_apply_microservice "modulo-informacoes-cadastrais" "servico-informacoes-de-destinatarios" "mic-sid-microservice" "0.0.1"
 build_apply_microservice "modulo-servicos-ao-cliente" "servico-acompanhamento-workflow" "msc-saw-microservice" "0.0.1"
+build_apply_microservice "modulo-gestao-estrategica" "servico-acompanhamento-indicadores" "mge-sai-microservice" "0.0.1"
 
 # Install Kong for Kubernetes
 kubectl create -f https://bit.ly/k4k8s

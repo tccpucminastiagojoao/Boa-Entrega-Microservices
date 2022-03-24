@@ -61,6 +61,27 @@ spec:
                 port:
                   number: 5000
 ---
+# Ingress for mge-sai-microservice
+# Modulo gestão estratégica (mge)
+# Serviço acompanhamento indicadores (sai)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mge-sai-ingress
+  namespace: default
+spec:
+  ingressClassName: kong
+  rules:
+    - http:
+        paths:
+          - path: /indicadores
+            pathType: Prefix
+            backend:
+              service:
+                name: mge-sai-service
+                port:
+                  number: 5000                  
+---
 # Create Service to access kong-proxy in default namespace
 apiVersion: v1
 kind: Service

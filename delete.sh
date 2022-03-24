@@ -30,6 +30,7 @@ delete_microservice() {
 delete_microservice "modulo-informacoes-cadastrais" "servico-informacoes-de-clientes"
 delete_microservice "modulo-informacoes-cadastrais" "servico-informacoes-de-destinatarios"
 delete_microservice "modulo-servicos-ao-cliente" "servico-acompanhamento-workflow"
+delete_microservice "modulo-gestao-estrategica" "servico-acompanhamento-indicadores"
 
 # Delete server jbpm-server-full
 MODULE_NAME="modulo-servicos-ao-cliente"

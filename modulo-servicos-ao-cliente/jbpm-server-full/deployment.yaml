@@ -14,6 +14,11 @@ spec:
         readOnly: false
   containers:
     - name: jbpm-server-full
+      resources:
+        limits:
+          memory: 4Gi
+        requests:
+          memory: 2Gi
       image: jboss/jbpm-server-full:7.61.0.Final
       imagePullPolicy: Always
       ports:

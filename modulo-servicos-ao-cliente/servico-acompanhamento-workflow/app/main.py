@@ -189,8 +189,7 @@ def create_app():
     from models import db
     db.init_app(app)
     with app.app_context():
-        if SIMULATE_DATE_PEDIDOS:        
-            db.drop_all()  # Only for tests with data examples
+        # db.drop_all()  # Only for tests with data examples
         db.create_all()
         db.session.commit()
 
@@ -510,6 +509,7 @@ def create_app():
     def get_rastreio():
         '''
         Get rastreio pedido
+        US1 : Rastreio de pacotes por Destinatario
         '''
         pedido_cod_rastreio = request.args.get('codigo')
         pedido_destinatario_cpf = request.args.get('cpf')
@@ -593,6 +593,40 @@ def create_app():
                 return make_response(jsonify({'message': 'Pedido Not Found'}), 404)
         else:
             return make_response(jsonify({'message': 'Check request form data'}), 400)
+
+    @app.route('/pedidos/status', methods=['GET'])
+    def get_status():
+        '''
+        Get pedido status
+        US2 : Acompanhar execução das entregas
+        '''
+        pedidos_total = db.session.query(Pedido).count()
+        pedidos_active = db.session.query(Pedido).filter(
+            Pedido.data_entrega == None).count()
+        pedidos_active_delayed = db.session.query(Pedido).filter(
+            Pedido.data_entrega == None).filter(datetime.now() > Pedido.prazo_entrega).count()
+        pedidos_completed = db.session.query(Pedido).filter(
+            Pedido.data_entrega != None).count()
+        pedidos_completed_delayed = db.session.query(Pedido).filter(
+            Pedido.data_entrega != None).filter(Pedido.data_entrega > Pedido.prazo_entrega).count()
+        return make_response(jsonify(
+            {
+                "pedidos": {
+                    "total": pedidos_total,
+                    "active": pedidos_active,
+                    "active_delayed": pedidos_active_delayed,
+                    "completed": pedidos_completed,
+                    "completed_delayed": pedidos_completed_delayed
+                },
+                "links": {
+                    "total": '{0}pedidos'.format(request.url_root),
+                    "active": '{0}pedidos?active=true'.format(request.url_root),
+                    "active_delayed": '{0}pedidos?active=true&delayed=true'.format(request.url_root),
+                    "completed": '{0}pedidos?completed=true'.format(request.url_root),
+                    "completed_delayed": '{0}pedidos?completed=true&delayed=true'.format(request.url_root),
+                }
+            }
+        ), 200)
 
     # jBPM = /server/containers/{containerId}/processes/definitions/{processId}
     @app.route('/pedidos/process/definitions', methods=['GET'])

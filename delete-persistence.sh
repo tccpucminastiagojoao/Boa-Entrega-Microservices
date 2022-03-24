@@ -30,6 +30,7 @@ delete_microservice_persistence() {
 delete_microservice_persistence "modulo-informacoes-cadastrais" "servico-informacoes-de-clientes"
 delete_microservice_persistence "modulo-informacoes-cadastrais" "servico-informacoes-de-destinatarios"
 delete_microservice_persistence "modulo-servicos-ao-cliente" "servico-acompanhamento-workflow"
+delete_microservice_persistence "modulo-gestao-estrategica" "servico-acompanhamento-indicadores"
 
 # Delete server jbpm-server-full persistence
 MODULE_NAME="modulo-servicos-ao-cliente"

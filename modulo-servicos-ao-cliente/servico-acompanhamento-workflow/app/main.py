@@ -136,7 +136,7 @@ def get_nodes_by_name(data, name):
 def get_api_gateway(req_url, req_params={}):
     try:
         api_gateway_req_url = '{0}{1}'.format(API_GATEWAY_URL, req_url)
-        print("API Gateaway request GET:",
+        print("API Gateway request GET:",
               api_gateway_req_url, "Parameters:", req_params)
         req_res = requests.get(
             url=api_gateway_req_url, headers=API_GATEWAY_JSON_HEADERS, auth=API_GATEWAY_AUTH, params=req_params)
@@ -217,22 +217,22 @@ def create_app():
         if completed and not delayed:
             pedidos = [get_pedido_data(pedido) for pedido in db.session.query(
                 Pedido).filter(Pedido.data_entrega != None)
-                .limit(pageSize).offset(page*pageSize)]
+                .order_by(Pedido.id.asc()).limit(pageSize).offset(page*pageSize)]
         elif completed and delayed:
             pedidos = [get_pedido_data(pedido) for pedido in db.session.query(
                 Pedido).filter(Pedido.data_entrega != None).filter(Pedido.data_entrega > Pedido.prazo_entrega)
-                .limit(pageSize).offset(page*pageSize)]
+                .order_by(Pedido.id.asc()).limit(pageSize).offset(page*pageSize)]
         elif active and not delayed:
             pedidos = [get_pedido_data(pedido) for pedido in db.session.query(
                 Pedido).filter(Pedido.data_entrega == None)
-                .limit(pageSize).offset(page*pageSize)]
+                .order_by(Pedido.id.asc()).limit(pageSize).offset(page*pageSize)]
         elif active and delayed:
             pedidos = [get_pedido_data(pedido) for pedido in db.session.query(
                 Pedido).filter(Pedido.data_entrega == None).filter(datetime.now() > Pedido.prazo_entrega)
-                .limit(pageSize).offset(page*pageSize)]
+                .order_by(Pedido.id.asc()).limit(pageSize).offset(page*pageSize)]
         else:
             pedidos = [get_pedido_data(pedido) for pedido in db.session.query(
-                Pedido).limit(pageSize).offset(page*pageSize).all()]
+                Pedido).order_by(Pedido.id.asc()).limit(pageSize).offset(page*pageSize).all()]
 
         return make_response(jsonify(pedidos), 200)
 
@@ -450,7 +450,7 @@ def create_app():
                         if SIMULATE_DATE_PEDIDOS:
                             # Random data_recebido to simulate delayed pedidos
                             pedido.data_recebido = pedido.data_criacao + \
-                                timedelta(days=random.randint(0, 5))
+                                timedelta(days=random.randint(0, 10))
 
                         db.session.commit()
                     elif workitem_node_name == 'Envio':
@@ -459,7 +459,7 @@ def create_app():
                         if SIMULATE_DATE_PEDIDOS:
                             # Random data_recebido to simulate delayed pedidos
                             pedido.data_despacho = pedido.data_recebido + \
-                                timedelta(days=random.randint(0, 5))
+                                timedelta(days=random.randint(0, 10))
 
                         db.session.commit()
                     elif workitem_node_name == 'Entregue':
@@ -468,7 +468,7 @@ def create_app():
                         if SIMULATE_DATE_PEDIDOS:
                             # Random data_entrega to simulate delayed pedidos
                             pedido.data_entrega = pedido.data_despacho + \
-                                timedelta(days=random.randint(0, 5))
+                                timedelta(days=random.randint(0, 10))
 
                         db.session.commit()
 

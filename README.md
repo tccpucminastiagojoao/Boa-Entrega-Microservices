@@ -1,58 +1,36 @@
-# TCC-POC3
+# Boa Entrega Deploy
 
-## WSL2 install
+## Develop Environment Install
+* Install Docker Desktop WSL 2 backend: https://docs.docker.com/desktop/windows/wsl/
+* Install VSCode: https://code.visualstudio.com/
+* Open this project in VSCode
+* Install Remote Development Extension Pack in VSCode
+* Use the "Remote-Containers: Open Folder in Container..." command from the Command Palette (Ctrl+Shift+P)
+    * Details: https://code.visualstudio.com/docs/remote/containers
+* Configure GCloud in Remote Container terminal:
+    * Command: gcloud init --console-only
 
-* https://www.virtualizationhowto.com/2021/11/install-minikube-in-wsl-2-with-kubectl-and-helm/
-  - Enable WSL2
-  - Install docker desktop windows
-  - Install ubuntu 20.04 WSL2
-  - docker cli para Ubuntu
-  - kubectl cli para Ubuntu
-  - gcloud cli para Ubuntu
+## Boa Entrega Deploy Commands:
+* create-all.sh: Create all cluster and deployments in GKE
+* delete-all.sh: Delete all cluster and deployments in GKE
+* create-cluster.sh: Create cluster in GKE
+* delete-cluster.sh: Delete cluster in GKE
+* deploy-persistence.sh: Deploy all persistences in cluster GKE
+* delete-persistence.sh: Delete all persistences in cluster GKE
+* deploy-services.sh: Deploy all services in cluster GKE
+* delete-services.sh: Delete all services in cluster GKE
 
-## GCloud
+## Access services:
+* Open: https://console.cloud.google.com/kubernetes/discovery?organizationId=0&project=applied-mystery-342719
 
-### Instalar Shell
-* https://cloud.google.com/sdk/docs/install#deb
+## Configure jBPM Server
+* Access jBPM: http://PUBLIC-IP-load-balancer-jbpm-server-full:8080/business-central/
+    * Username: wbadmin
+    * Password: wbadmin
+* Create project Boa-Entrega in MySpace
+* Import Asset Entrega-Padrao (modulo-servicos-ao-cliente/jbpm-server-full/bpm-assets/Entrega-Padrao.bpmn)
+* Deploy Project Boa-Entrega
+* Check process definitions in pedidos: http://PUBLIC-IP-kong-proxy/pedidos/process/definitions
 
-### Deploy Kubernetes
-
-* https://cloud.google.com/kubernetes-engine/docs/tutorials/hello-app#cloud-shell
-
-### Create Docker repository
-
-> Console (tccpucminastiagojoao-repo - southamerica-east1):  
-> https://console.cloud.google.com/artifacts/create-repo?project=applied-mystery-342719
-
-#### Create cluster Kubernetes
-
-> Shell (tccpucminastiagojoao-cluster - southamerica-east1-a):  
-> gcloud container --project "applied-mystery-342719" clusters create "tccpucminastiagojoao-cluster" --zone "southamerica-east1-a" --no-enable-basic-auth --cluster-version "1.21.6-gke.1503" --release-channel "regular" --machine-type "e2-medium" --image-type "COS_CONTAINERD" --disk-type "pd-standard" --disk-size "100" --metadata disable-legacy-endpoints=true --scopes "https://www.googleapis.com/auth/devstorage.read_only","https://www.googleapis.com/auth/logging.write","https://www.googleapis.com/auth/monitoring","https://www.googleapis.com/auth/servicecontrol","https://www.googleapis.com/auth/service.management.readonly","https://www.googleapis.com/auth/trace.append" --max-pods-per-node "110" --num-nodes "3" --logging=SYSTEM,WORKLOAD --monitoring=SYSTEM --enable-ip-alias --network "projects/applied-mystery-342719/global/networks/default" --subnetwork "projects/applied-mystery-342719/regions/southamerica-east1/subnetworks/default" --no-enable-intra-node-visibility --default-max-pods-per-node "110" --no-enable-master-authorized-networks --addons HorizontalPodAutoscaling,HttpLoadBalancing,GcePersistentDiskCsiDriver --enable-autoupgrade --enable-autorepair --max-surge-upgrade 1 --max-unavailable-upgrade 0 --enable-shielded-nodes --node-locations "southamerica-east1-a"
-
-#### Delete cluster Kubernetes:
-
-> Shell:  
-> gcloud container clusters delete "tccpucminastiagojoao-cluster" --zone "southamerica-east1-a"
-
-## Tricks:
-
-### Access bash in running Pod
-
-* kubectl get pod
-* kubectl exec --stdin --tty pod-name -- /bin/bash
-
-### Access jBPM business-central
-* Pod port forward: gcloud container clusters get-credentials tccpucminastiagojoao-cluster --zone southamerica-east1-a --project applied-mystery-342719 && kubectl port-forward jbpm-server-full 8080:8080
-* Path: http://127.0.0.1:8080/business-central
-
-### Access Postgres
-* Pod port forward: gcloud container clusters get-credentials tccpucminastiagojoao-cluster --zone southamerica-east1-a --project applied-mystery-342719 && kubectl port-forward <???-???-postgres> 5432:5432
-
-### Docker remove cache
-* docker system prune -a
-
-### Docker access bash
-* docker exec -it <container name> /bin/bash
-
-### Restart deployment after change docker image
-kubectl rollout restart deploy msc-saw-deployment
+## Create fake pedidos using REST API
+* Command: ./modulo-servicos-ao-cliente/servico-acompanhamento-workflow/create-fake-pedidos.sh "PUBLIC-IP-kong-proxy" NUMBER_OF_PEDIDOS

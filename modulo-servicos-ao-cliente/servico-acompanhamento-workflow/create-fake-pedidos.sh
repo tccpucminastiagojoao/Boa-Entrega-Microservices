@@ -6,7 +6,7 @@
 API_GATEWAY=${1}
 NUMBER_PEDIDOS=${2}
 
-# Create 100 pedidos
+# Create pedidos
 for i in $(seq 1 $NUMBER_PEDIDOS); do
     cliente="$((1 + ($RANDOM % 200)))"
     destinatario="$((1 + ($RANDOM % 200)))"
@@ -14,18 +14,23 @@ for i in $(seq 1 $NUMBER_PEDIDOS); do
     valor_pedido="$(($RANDOM % 200)).$(($RANDOM%99))"
 
     # Create pedido
-    pedido=$(curl -s --location --request POST "http://${API_GATEWAY}/pedidos" \
+    pedido=$(curl -m 5 -s --location --request POST "http://${API_GATEWAY}/pedidos" \
     --form "id_cliente=\"${cliente}\"" \
     --form "id_destinatario=\"${destinatario}\"" \
     --form "prazo_pedido=\"${prazo_pedido}\"" \
     --form "valor_pedido=\"${valor_pedido}\"")
     pedido_id=$(jq -r  '.id' <<< "${pedido}")
-    
-    echo "Pedido criado: ${pedido_id}"
 
     # Complete random N workitems
     completes=$(($RANDOM % 20))
     for j in $(seq 1 $completes); do
-        curl -s --location --request PUT "http://${API_GATEWAY}/pedidos/${pedido_id}/workitems/0/complete"
+        workitem=$(curl -m 5 -s --location --request PUT "http://${API_GATEWAY}/pedidos/${pedido_id}/workitems/0/complete")
+        workitem_message=$(jq -r  '.message' <<< "${workitem}")
+        echo "Workitem: ${workitem_message}"
+        if [[ "$workitem_message" == *"Workitem Not Found"* ]]; then
+            break
+        fi
     done
+
+    echo "Pedido criado: ${pedido_id}"
 done
